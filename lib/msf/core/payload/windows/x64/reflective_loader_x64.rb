@@ -1,21 +1,22 @@
 module Msf::Payload::Windows::ReflectiveLoaderX64
   def asm_reflective_loader(opts = {})
-    iv = rand(0x100000000);
+    iv = rand(0x100000000)
 
-    def hash_funcname(name, iv)
-        fun_hash = Rex::Text.ror13_hash(name + "\x00", iv: iv)
+    def hash_funcname(name, nullbyte: false, unicode: false, iv: 0)
+        name = name.unpack('C*').pack('v*') if unicode
+        fun_hash = Rex::Text.ror13_hash(name + (nullbyte ? "\x00" : ""), iv: iv)
         "0x#{(fun_hash & 0xFFFFFFFF).to_s(16)}"
     end
 
     # Hash constants (from ReflectiveLoader.h)
     iv_hash                      = '0x' + (iv & 0xFFFFFFFF).to_s(16)
-    kernel32dll_hash             = hash_funcname('kernel32.dll', iv)
-    ntdlldll_hash                = hash_funcname('ntdll.dll', iv)
-    loadlibrarya_hash            = hash_funcname('LoadLibraryA', iv)
-    getprocaddress_hash          = hash_funcname('GetProcAddress', iv)
-    zwallocatevirtualmemory_hash = hash_funcname('ZwAllocateVirtualMemory', iv)
-    zwprotectvirtualmemory_hash  = hash_funcname('ZwProtectVirtualMemory', iv)
-    ntflushinstructioncache_hash = hash_funcname('NtFlushInstructionCache', iv)
+    kernel32dll_hash             = hash_funcname('KERNEL32.DLL', unicode: true, iv: iv)
+    ntdlldll_hash                = hash_funcname('NTDLL.DLL', unicode: true, iv: iv)
+    loadlibrarya_hash            = hash_funcname('LoadLibraryA', iv: iv)
+    getprocaddress_hash          = hash_funcname('GetProcAddress', iv: iv)
+    zwallocatevirtualmemory_hash = hash_funcname('ZwAllocateVirtualMemory', iv: iv)
+    zwprotectvirtualmemory_hash  = hash_funcname('ZwProtectVirtualMemory', iv: iv)
+    ntflushinstructioncache_hash = hash_funcname('NtFlushInstructionCache', iv: iv)
 
     # PE / reloc constants
     image_dos_signature      = '0x5A4D'
